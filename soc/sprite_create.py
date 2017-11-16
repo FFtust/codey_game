@@ -16,13 +16,42 @@ class sprite_create():
         p_y_u = 0
         p_y_d = 0
         self.sprite_info = []
-        #print("face string is:", sp_info)
         for i in range(FACE_CROSS):
             dat = int(sp_info[i * 2 :  (i + 1) * 2], 16)
-
             self.sprite_info.append(dat)
+            if count == 0 and dat != 0:
+                p_x_l = i
+                count += 1
+            elif count == 1 and dat == 0:
+                p_x_r = i - 1
+                count += 1
+        if count == 1:
+            p_x_r = 15 
+ 
+        count = 0
+        ret = 0
+        # check the lfet_up point
+        for i in range(FACE_LINE):
+            for j in range(FACE_CROSS):
+                ret |= self.sprite_info[j] & (1 << i)
+            if count == 0 and ret != 0:
+                p_y_u = i
+                count += 1
+            elif count == 1 and ret == 0:
+                p_y_d = i - 1
+                count += 1
+                break
+            if count > 2:
+                break
+            ret = 0    
+
+        if count == 1:
+            p_y_d = 7 
+        self.lu_coord = [p_x_l, p_y_u] 
+        self.rd_coord = [p_x_r, p_y_d]  
         self.rotate_angle = 0
         self.position = [0, 0]
+        self.show_flag = True
     def add_point(self):
         pass
 
@@ -45,19 +74,17 @@ class sprite_create():
         self.position = [0, 0]
 
     def rotate(self, angle):
-        pass
+        self.rotate_angle += angle
 
     def rotate_to(self, angle):
-        pass
+        self.rotate_angle = angle
 
     def show(self):
-        pass
+        self.show_flag = True
 
     def hide(self):
-        pass
+        self.show_flag = False
 
-    def delete(self):
-        del self.sprite
 
 class game_base():
     def __init__(self):
@@ -81,6 +108,8 @@ class game_base():
         self.face_buffer = [0] * FACE_CROSS
         for i in range(FACE_CROSS):
             for item in self.sprite_list:
+                if item.show_flag == False:
+                    continue
                 if i + item.position[0] < 0 or  i + item.position[0] >= FACE_CROSS:
                     continue
                 if item.position[1] > 0:
@@ -90,20 +119,27 @@ class game_base():
 
         codey_ledmatrix().faceplate_show(0, 0, *self.face_buffer)
 
+    def screen_refresh_auto(self):
+        while True:
+            self.screen_refresh()
+            time.sleep(REFRESH_FREQUENCY / 1000)
+
     def game_start(self):
-        pass
+        _thread.start_new_thread(self.screen_refresh_auto, ())
 
 
 game = game_base()
+game.game_start()
+
 a = sprite_create("00000000000003040300000000000000")
 b = sprite_create("80808080808080808080808080808080")
 game.add_sprite(a)
 game.add_sprite(b)
-game.screen_refresh()
+#game.screen_refresh()
 time.sleep(1)
 a.right()
 b.down()
-game.screen_refresh()
+#game.screen_refresh()
 
 while True:
     if codey.is_button("A"):
@@ -111,8 +147,7 @@ while True:
     elif codey.is_button("B"):
         a.right()
     elif codey.is_button("C"):
-        game.del_sprite(b)  
+        a.home()
     if codey.dail() > 50:
         a.up()   
-    game.screen_refresh()
-    time.sleep(1) 
+    time.sleep(0.5) 
