@@ -88,32 +88,36 @@ class sprite_create():
         sp_cross_num = 0
         ret_info = [0] * 16
         region_len = max((self.rd_coord[0] - self.lu_coord[0]), (self.rd_coord[1] - self.lu_coord[1]))
-        print("region is", self.lu_coord, self.rd_coord)
         sr_line_num = self.lu_coord[1]
-        sp_line_num = sr_line_num + region_len
         sr_cross_num = self.lu_coord[0]
-        sp_cross_num = sr_cross_num + region_len
 
         if self.rotate_angle < 0:
             self.rotate_angle += 360
         if self.rotate_angle % 360 == 90:
-            print(self.sprite_info)
             temp = 0
-            #print("region len is", region_len)
-            for j in  range(region_len + 1):
-                for i in range(region_len + 1):
-                    if (self.sprite_info[sr_cross_num + i] & (1 << (sr_line_num + j))):
-                        temp |=  (1 << (i + region_len))
-                print(temp)
-                ret_info[sr_cross_num + region_len - j] = temp
+            for i in  range(region_len + 1):
+                for j in range(region_len + 1):
+                    if (self.sprite_info[sr_cross_num + j] & (1 << (sr_line_num + i))):
+                        temp |=  (1 << (j + sr_line_num))
+                ret_info[sr_cross_num + region_len - i] = temp
                 temp = 0
-
-            #print("ret info is", ret_info)
             return ret_info
         elif self.rotate_angle % 360 == 180:
-            pass
+            for i in  range(region_len + 1): 
+                for j in range(region_len + 1):
+                    if (self.sprite_info[sr_cross_num + j] & (1 << (sr_line_num + i))):
+                        ret_info[sr_cross_num + region_len - j] |= 1 << (sr_line_num + region_len - i)
+            return ret_info
         elif self.rotate_angle % 360 == 270:
-            pass    
+            temp = 0
+            for i in  range(region_len + 1):
+                for j in range(region_len + 1):
+                    if (self.sprite_info[sr_cross_num + region_len - j] & (1 << (sr_line_num + i))):
+                        temp |=  (1 << (j + sr_line_num))
+                ret_info[sr_cross_num + i] = temp
+                temp = 0
+
+            return ret_info
         else:
             return self.sprite_info 
 
