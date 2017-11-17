@@ -18,7 +18,7 @@ class sprite_create():
         self.sprite_info = []
         for i in range(FACE_CROSS):
             dat = int(sp_info[i * 2 :  (i + 1) * 2], 16)
-            self.sprite_info.append(dat)
+            self.sprite_info.append(codey.face_info_invert(dat))
             if count == 0 and dat != 0:
                 p_x_l = i
                 count += 1
@@ -74,10 +74,48 @@ class sprite_create():
         self.position = [0, 0]
 
     def rotate(self, angle):
-        self.rotate_angle += angle
+        if angle % 90 == 0:
+            self.rotate_angle += angle
 
     def rotate_to(self, angle):
-        self.rotate_angle = angle
+        if angle % 90 == 0:
+            self.rotate_angle = angle
+
+    def face_rotate_info(self):
+        sr_line_num = 0
+        sp_line_num = 0
+        sr_cross_num = 0
+        sp_cross_num = 0
+        ret_info = [0] * 16
+        region_len = max((self.rd_coord[0] - self.lu_coord[0]), (self.rd_coord[1] - self.lu_coord[1]))
+        print("region is", self.lu_coord, self.rd_coord)
+        sr_line_num = self.lu_coord[1]
+        sp_line_num = sr_line_num + region_len
+        sr_cross_num = self.lu_coord[0]
+        sp_cross_num = sr_cross_num + region_len
+
+        if self.rotate_angle < 0:
+            self.rotate_angle += 360
+        if self.rotate_angle % 360 == 90:
+            print(self.sprite_info)
+            temp = 0
+            #print("region len is", region_len)
+            for j in  range(region_len + 1):
+                for i in range(region_len + 1):
+                    if (self.sprite_info[sr_cross_num + i] & (1 << (sr_line_num + j))):
+                        temp |=  (1 << (i + region_len))
+                print(temp)
+                ret_info[sr_cross_num + region_len - j] = temp
+                temp = 0
+
+            #print("ret info is", ret_info)
+            return ret_info
+        elif self.rotate_angle % 360 == 180:
+            pass
+        elif self.rotate_angle % 360 == 270:
+            pass    
+        else:
+            return self.sprite_info 
 
     def show(self):
         self.show_flag = True
@@ -112,10 +150,11 @@ class game_base():
                     continue
                 if i + item.position[0] < 0 or  i + item.position[0] >= FACE_CROSS:
                     continue
+                temp = item.face_rotate_info()
                 if item.position[1] > 0:
-                    self.face_buffer[i + item.position[0]] |= (item.sprite_info[i] >> item.position[1])
+                    self.face_buffer[i + item.position[0]] |= (temp[i] >> item.position[1])
                 else:
-                    self.face_buffer[i + item.position[0]] |= (item.sprite_info[i] << (-item.position[1]))
+                    self.face_buffer[i + item.position[0]] |= (temp[i] << (-item.position[1]))
 
         codey_ledmatrix().faceplate_show(0, 0, *self.face_buffer)
 
@@ -131,15 +170,9 @@ class game_base():
 game = game_base()
 game.game_start()
 
-a = sprite_create("00000000000003040300000000000000")
-b = sprite_create("80808080808080808080808080808080")
+a = sprite_create("00000000000000101810000000000000")
 game.add_sprite(a)
-game.add_sprite(b)
-#game.screen_refresh()
 time.sleep(1)
-a.right()
-b.down()
-#game.screen_refresh()
 
 while True:
     if codey.is_button("A"):
@@ -147,7 +180,7 @@ while True:
     elif codey.is_button("B"):
         a.right()
     elif codey.is_button("C"):
-        a.home()
+        a.rotate(90)
     if codey.dail() > 50:
         a.up()   
     time.sleep(0.5) 
