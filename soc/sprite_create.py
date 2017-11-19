@@ -8,6 +8,18 @@ FACE_CROSS = 16
 REFRESH_FREQUENCY = 50 
 SPRITE_NUM_MAX = 20
 
+def face_info_invert(dat):
+    tempdata = 0
+    tempdata += (dat & 0x80) >> 7
+    tempdata += (dat & 0x40) >> 5
+    tempdata += (dat & 0x20) >> 3
+    tempdata += (dat & 0x10) >> 1
+    tempdata += (dat & 0x08) << 1
+    tempdata += (dat & 0x04) << 3
+    tempdata += (dat & 0x02) << 5
+    tempdata += (dat & 0x01) << 7
+    return tempdata
+
 class sprite_create():
     def __init__(self, sp_info):
         count = 0
@@ -18,7 +30,7 @@ class sprite_create():
         self.sprite_info = []
         for i in range(FACE_CROSS):
             dat = int(sp_info[i * 2 :  (i + 1) * 2], 16)
-            self.sprite_info.append(codey.face_info_invert(dat))
+            self.sprite_info.append(face_info_invert(dat))
             if count == 0 and dat != 0:
                 p_x_l = i
                 count += 1
@@ -76,7 +88,6 @@ class sprite_create():
     def rotate(self, angle):
         if angle % 90 == 0:
             self.rotate_angle += angle
-
     def rotate_to(self, angle):
         if angle % 90 == 0:
             self.rotate_angle = angle
@@ -171,12 +182,30 @@ class game_base():
         _thread.start_new_thread(self.screen_refresh_auto, ())
 
 
+# example
+# these codes is necessary 
 game = game_base()
 game.game_start()
-
-a = sprite_create("00000000000000101810000000000000")
+# you can add a sprite like this:
+## a = sprite_create("00183000000000000000000000000000")
+## game.add_sprite(a)
+a = sprite_create("00183000000000000000000000000000")
+b = sprite_create("00000000000000000010181000000000")
+c = sprite_create("00000000003808000000000000000000")
+d = sprite_create("00000000000000000000000000303000")
 game.add_sprite(a)
+game.add_sprite(b)
+game.add_sprite(c)
+game.add_sprite(d)
 time.sleep(1)
+# after add the sprite, you can control the sprite like this:
+## sprite.rotate(90)
+## sprite.rotate_to(90)
+## sprite.up()
+## sprite.down()
+## sprite.left()
+## sprite.right()
+## sprite.home()
 
 while True:
     if codey.is_button("A"):
@@ -187,4 +216,8 @@ while True:
         a.rotate(90)
     if codey.dail() > 50:
         a.up()   
-    time.sleep(0.5) 
+    a.rotate(90)
+    b.rotate(90)
+    c.rotate(90)
+    d.rotate(90)
+    time.sleep(0.3) 
