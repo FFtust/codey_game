@@ -85,10 +85,12 @@ class sprite_create():
                 self.rotate_center[i] = (self.rd_coord[i] + self.lu_coord[i]) // 2
 
 
-        self.region_len = max((self.rd_coord[0] - self.lu_coord[0]), (self.rd_coord[1] - self.lu_coord[1])) + 1
-
-        if self.region_len % 2 == 0:
-            self.region_len += 1
+        if (self.rd_coord[0] - self.lu_coord[0]) == (self.rd_coord[1] - self.lu_coord[1]):
+            self.region_len = (self.rd_coord[0] - self.lu_coord[0]) + 1
+        else:
+            self.region_len = max((self.rd_coord[0] - self.lu_coord[0]), (self.rd_coord[1] - self.lu_coord[1])) + 1
+            if self.region_len % 2 == 0:
+                self.region_len += 1
 
 
     def add_point(self):
@@ -140,9 +142,9 @@ class sprite_create():
         else:
             self.meet_border_status = NOT_MEET
 
-        print("meet_border_status", self.meet_border_status)
-        print("position", self.position)
-        print("coor", self.lu_coord, self.rd_coord)
+        #print("meet_border_status", self.meet_border_status)
+        #print("position", self.position)
+        #print("coor", self.lu_coord, self.rd_coord)
         return self.meet_border_status
         
 
@@ -153,8 +155,8 @@ class sprite_create():
         ret_info = [0] * 16
 
 # calculate buffer after rotate ************************************************************************* 
-        sr_line_num = self.rotate_center[1] - (self.region_len - 1) // 2
-        sr_cross_num = self.rotate_center[0] - (self.region_len - 1) // 2
+        sr_line_num = self.rotate_center[1] - (self.region_len) // 2
+        sr_cross_num = self.rotate_center[0] - (self.region_len) // 2
         # print("start line id is:", sr_line_num, "start column id is", sr_cross_num)
 
         if self.rotate_angle < 0:
@@ -243,9 +245,9 @@ game.game_start()
 # you can add a sprite like this:
 ## a = sprite_create("00183000000000000000000000000000")
 ## game.add_sprite(a)
-#a = sprite_create("00183000000000000000000000000000")
-# b = sprite_create("00000010101010000000000000000000")
-a = sprite_create("00000000003808000000000000000000")
+a = sprite_create("00000010101010000000000000000000") #sprite_create("00183000000000000000000000000000")
+b = sprite_create("00000010101010000000000000000000")
+c = sprite_create("00000000003808000000000000000000")
 d = sprite_create("00000000000000000000000000303000")
 game.add_sprite(a)
 #game.add_sprite(b)
@@ -267,9 +269,12 @@ while True:
         a.right()
     elif codey.is_button("C"):
         a.rotate(90) 
-    if codey.dail() > 50:
-        a.rotate(90)   
-    # a.rotate(90)
+    if codey.dail() > 80:
+        a.up()
+    elif codey.dail() < 20:
+        a.down()   
+
+    #a.rotate(90)
     #b.rotate(90)
     #c.rotate(90)
     #d.rotate(90)
