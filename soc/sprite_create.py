@@ -74,6 +74,23 @@ class sprite_create():
         self.show_flag = True
         self.meet_border_status = 0 # 0: not meet 1: up 2: down 3: left 4: right
 
+# calculate rotate center and region *******************************************************************
+        self.rotate_center = [0, 0]
+        self.region_len = 0
+        for i in range(2):
+            self.rotate_center[i] = self.rd_coord[i] - self.lu_coord[i] + 1
+            if self.rotate_center[i] % 2 == 0:
+                self.rotate_center[i] = (self.rd_coord[i] + self.lu_coord[i] + 1) // 2
+            else:
+                self.rotate_center[i] = (self.rd_coord[i] + self.lu_coord[i]) // 2
+
+
+        self.region_len = max((self.rd_coord[0] - self.lu_coord[0]), (self.rd_coord[1] - self.lu_coord[1])) + 1
+
+        if self.region_len % 2 == 0:
+            self.region_len += 1
+
+
     def add_point(self):
         pass
 
@@ -132,58 +149,39 @@ class sprite_create():
 # function below shou not be called by users            
     def face_rotate_info(self):
         sr_line_num = 0
-        sp_line_num = 0
         sr_cross_num = 0
-        sp_cross_num = 0
-
-        rotate_center = [0, 0]
         ret_info = [0] * 16
 
-# calculate rotate center and region *******************************************************************
-        for i in range(2):
-            rotate_center[i] = self.rd_coord[i] - self.lu_coord[i] + 1
-            if rotate_center[i] % 2 == i:
-                rotate_center[i] = int((self.rd_coord[i] + self.lu_coord[i] + 1) / 2)
-            else:
-                rotate_center[i] = int((self.rd_coord[i] + self.lu_coord[i]) / 2)
-
-
-        region_len = max((self.rd_coord[0] - self.lu_coord[0]), (self.rd_coord[1] - self.lu_coord[1])) + 1
-
-        if region_len % 2 == 0:
-            region_len += 1
-
-        print("rotate center is:", rotate_center, "regine is", region_len)
 # calculate buffer after rotate ************************************************************************* 
-        sr_line_num = rotate_center[1] - (region_len - 1) // 2
-        sr_cross_num = rotate_center[0] - (region_len - 1) // 2
-        print("start line id is:", sr_line_num, "start column id is", sr_cross_num)
+        sr_line_num = self.rotate_center[1] - (self.region_len - 1) // 2
+        sr_cross_num = self.rotate_center[0] - (self.region_len - 1) // 2
+        # print("start line id is:", sr_line_num, "start column id is", sr_cross_num)
 
         if self.rotate_angle < 0:
             self.rotate_angle += 360
 
         if self.rotate_angle % 360 == 90:
             temp = 0
-            for i in  range(region_len): # column
-                for j in range(region_len): # line
+            for i in  range(self.region_len): # column
+                for j in range(self.region_len): # line
                     if (self.sprite_info[sr_cross_num + j] & (1 << (sr_line_num + i))):
                         temp |=  (1 << (j + sr_line_num))
-                ret_info[sr_cross_num + region_len - i - 1] = temp
+                ret_info[sr_cross_num + self.region_len - i - 1] = temp
                 temp = 0
             return ret_info
 
         elif self.rotate_angle % 360 == 180:
-            for i in  range(region_len): 
-                for j in range(region_len):
+            for i in  range(self.region_len): 
+                for j in range(self.region_len):
                     if (self.sprite_info[sr_cross_num + j] & (1 << (sr_line_num + i))):
-                        ret_info[sr_cross_num + region_len - j - 1] |= 1 << (sr_line_num + region_len - i - 1)
+                        ret_info[sr_cross_num + self.region_len - j - 1] |= 1 << (sr_line_num + self.region_len - i - 1)
             return ret_info
 
         elif self.rotate_angle % 360 == 270:
             temp = 0
-            for i in  range(region_len):
-                for j in range(region_len):
-                    if (self.sprite_info[sr_cross_num + region_len - j - 1] & (1 << (sr_line_num + i))):
+            for i in  range(self.region_len):
+                for j in range(self.region_len):
+                    if (self.sprite_info[sr_cross_num + self.region_len - j - 1] & (1 << (sr_line_num + i))):
                         temp |=  (1 << (j + sr_line_num))
                 ret_info[sr_cross_num + i] = temp
                 temp = 0
