@@ -44,6 +44,13 @@ def calculate_coordinate_after_rotate(rotate_center, pre_coor, angle):
     # print("cal out", rotate_center, a_coor)
     return a_coor
 
+def script_string_to_list(script):
+    sprite_info = []
+    for i in range(FACE_CROSS):
+        dat = int(script[i * 2 :  (i + 1) * 2], 16)
+        sprite_info.append(dat)
+    return sprite_info
+
 class sprite_create():
     def __init__(self, sp_info):
         count = 0
@@ -244,8 +251,22 @@ class game_base():
     def __init__(self):
         self.status = 0
         self.face_buffer = [0] * FACE_CROSS
-
+        self.back_ground = [0] * FACE_CROSS
+        self.back_ground_show = True
         self.sprite_list = []
+
+    def set_background(self, background):
+        s_list = script_string_to_list(background)
+        if type(s_list) == list:
+            if len(s_list) == FACE_CROSS:
+                self.back_ground = s_list.copy()
+
+    def show_background(self):
+        self.back_ground_show = True
+
+    def hide_background(self):
+        self.back_ground_show = False
+
 
     def del_sprite(self, sp):
         for i in range(len(self.sprite_list)):
@@ -274,12 +295,13 @@ class game_base():
         for i in range(FACE_CROSS):
             for item in self.sprite_list:
                 if i == 0:
-                    item.face_rotate_info() #item.meet_border_check()
+                    item.face_rotate_info()
                 if item.show_flag == False:
                     continue
-                self.face_buffer[i] |= item.sprite_current[i] # (temp[i] >> item.position[1])
-
-            self.face_buffer[i ] = face_info_invert(self.face_buffer[i])
+                self.face_buffer[i] |= item.sprite_current[i]
+            if self.back_ground_show:
+                self.face_buffer[i] |= self.back_ground[i]
+            self.face_buffer[i] = face_info_invert(self.face_buffer[i])
         codey_ledmatrix().faceplate_show(0, 0, *self.face_buffer)
 
     def screen_refresh_auto(self):
@@ -302,8 +324,10 @@ a = sprite_create("00000010101010000000000000000000") #sprite_create("0018300000
 b = sprite_create("00000010101010000000000000000000")
 c = sprite_create("00000000003808000000000000000000")
 d = sprite_create("00000000000000000000000000303000")
+background = "01010101010101010101010101010101"
 game.add_sprite(a)
 game.add_sprite(b)
+game.set_background(background)
 #game.add_sprite(c)
 #game.add_sprite(d)
 # after add the sprite, you can control the sprite like this:
