@@ -32,7 +32,7 @@ def face_info_invert(dat):
 # calculate the next coordinate after rotate
 # angle must be multiple of 90
 def calculate_coordinate_after_rotate(rotate_center, pre_coor, angle):
-    print("cal in", rotate_center, pre_coor, angle)
+    # print("cal in", rotate_center, pre_coor, angle)
     pre_coor[0] = pre_coor[0] - rotate_center[0]
     pre_coor[1] = pre_coor[1] - rotate_center[1]
     angle = (angle + 360) % 360
@@ -41,7 +41,7 @@ def calculate_coordinate_after_rotate(rotate_center, pre_coor, angle):
     a_coor[1] = -1 * round(math.sin(angle)) * pre_coor[0] + round(math.cos(angle)) * pre_coor[1]
     a_coor[0] = a_coor[0] + rotate_center[0]
     a_coor[1] = a_coor[1] + rotate_center[1]
-    print("cal out", rotate_center, a_coor)
+    # print("cal out", rotate_center, a_coor)
     return a_coor
 
 class sprite_create():
@@ -52,6 +52,8 @@ class sprite_create():
         p_y_u = 0
         p_y_d = 0
         self.sprite_info = []
+        self.sprite_current = [0] * 16
+
         for i in range(FACE_CROSS):
             dat = int(sp_info[i * 2 :  (i + 1) * 2], 16)
             self.sprite_info.append(dat)
@@ -159,8 +161,8 @@ class sprite_create():
             return self.lu_coord.copy(), self.rd_coord.copy()
         else:
             time_num = ((self.rotate_angle + 360) % 360) // 90
-        print("time num is", time_num)
-        print(peak_coor)
+        #print("time num is", time_num)
+        #print(peak_coor)
         lu = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[4 - time_num], self.rotate_angle)
         rd = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[2 - time_num], self.rotate_angle)
         return lu.copy(), rd.copy()
@@ -182,10 +184,10 @@ class sprite_create():
         else:
             self.meet_border_status = NOT_MEET
 
-        print("meet_border_status", self.meet_border_status)
-        print("position", self.position)
-        print("coor", self.lu_coord, self.rd_coord)
-        print("coor after rotate", lu_c, rd_c)
+        # print("meet_border_status", self.meet_border_status)
+        # print("position", self.position)
+        # print("coor", self.lu_coord, self.rd_coord)
+        # print("coor after rotate", lu_c, rd_c)
         return self.meet_border_status
         
 
@@ -194,7 +196,6 @@ class sprite_create():
         sr_line_num = 0
         sr_cross_num = 0
         ret_info = [0] * 16
-
 # calculate buffer after rotate ************************************************************************* 
         sr_line_num = self.rotate_center[1] - (self.region_len) // 2
         sr_cross_num = self.rotate_center[0] - (self.region_len) // 2
@@ -211,14 +212,12 @@ class sprite_create():
                         temp |=  (1 << (j + sr_line_num))
                 ret_info[sr_cross_num + self.region_len - i - 1] = temp
                 temp = 0
-            return ret_info
 
         elif self.rotate_angle % 360 == 180:
             for i in  range(self.region_len): 
                 for j in range(self.region_len):
                     if (self.sprite_info[sr_cross_num + j] & (1 << (sr_line_num + i))):
                         ret_info[sr_cross_num + self.region_len - j - 1] |= 1 << (sr_line_num + self.region_len - i - 1)
-            return ret_info
 
         elif self.rotate_angle % 360 == 270:
             temp = 0
@@ -228,10 +227,18 @@ class sprite_create():
                         temp |=  (1 << (j + sr_line_num))
                 ret_info[sr_cross_num + i] = temp
                 temp = 0
-
-            return ret_info
         else:
-            return self.sprite_info 
+            ret_info = self.sprite_info.copy()
+
+        self.sprite_current = [0] * 16
+        for i in range(16):
+            if (i + self.position[0]) >= 0 and  (i + self.position[0]) <= 15:
+                if self.position[1] > 0:
+                    self.sprite_current[i + self.position[0]] = (ret_info[i] >> self.position[1])
+                else:
+                    self.sprite_current[i + self.position[0]] = (ret_info[i] << (-self.position[1]))
+
+        #print(self.sprite_current)
 
 class game_base():
     def __init__(self):
@@ -251,23 +258,28 @@ class game_base():
     def add_sprite(self, sp):
         self.sprite_list.append(sp)
 
+    def collision_check(self, script_1, script_2):
+        start_num = script_1.lu_coord[0] + script_1.position[0]
+        #print("start_num", start_num)
+        for i in range(script_1.rd_coord[0] - script_1.lu_coord[0] + 1):
+            if i + start_num < 0 or i + start_num > 15:
+                continue
+            if script_1.sprite_current[i + start_num] ^ script_2.sprite_current[i + start_num] \
+             != script_1.sprite_current[i + start_num] | script_2.sprite_current[i + start_num]:
+                return True
+        return False
+
     def screen_refresh(self):
         self.face_buffer = [0] * FACE_CROSS
         for i in range(FACE_CROSS):
             for item in self.sprite_list:
                 if i == 0:
-                    pass #item.meet_border_check()
+                    item.face_rotate_info() #item.meet_border_check()
                 if item.show_flag == False:
                     continue
-                if i + item.position[0] < 0 or  i + item.position[0] >= FACE_CROSS:
-                    continue
-                temp = item.face_rotate_info()
-                if item.position[1] > 0:
-                    self.face_buffer[i + item.position[0]] |= (temp[i] >> item.position[1])
-                else:
-                    self.face_buffer[i + item.position[0]] |= (temp[i] << (-item.position[1]))
-                
-                self.face_buffer[i + item.position[0]] = face_info_invert(self.face_buffer[i + item.position[0]])
+                self.face_buffer[i] |= item.sprite_current[i] # (temp[i] >> item.position[1])
+
+            self.face_buffer[i ] = face_info_invert(self.face_buffer[i])
         codey_ledmatrix().faceplate_show(0, 0, *self.face_buffer)
 
     def screen_refresh_auto(self):
@@ -291,7 +303,7 @@ b = sprite_create("00000010101010000000000000000000")
 c = sprite_create("00000000003808000000000000000000")
 d = sprite_create("00000000000000000000000000303000")
 game.add_sprite(a)
-#game.add_sprite(b)
+game.add_sprite(b)
 #game.add_sprite(c)
 #game.add_sprite(d)
 # after add the sprite, you can control the sprite like this:
@@ -313,12 +325,13 @@ while True:
     elif codey.is_button("C"):
         a.rotate(90)
         a.meet_border_check()
-    if codey.dail() > 80:
-        a.up()
-        a.meet_border_check()
-    elif codey.dail() < 20:
-        a.down()   
-
+    #if codey.dail() > 80:
+    #    a.up()
+    #    a.meet_border_check()
+    #elif codey.dail() < 20:
+    #    a.down()   
+    if game.collision_check(a, b):
+        print("a b collide")
     #a.rotate(90)
     #b.rotate(90)
     #c.rotate(90)
