@@ -3,6 +3,7 @@ from codey_global_board import *
 import _thread
 import time
 from codey_ledmatrix_board import codey_ledmatrix
+import math
 
 FACE_LINE = 8
 FACE_CROSS = 16
@@ -15,6 +16,7 @@ DOWN_MEET = 2
 LEFT_MEET = 3
 RIGHT_MEET = 4
 
+# this is for the mismatching axis definition
 def face_info_invert(dat):
     tempdata = 0
     tempdata += (dat & 0x80) >> 7
@@ -26,6 +28,21 @@ def face_info_invert(dat):
     tempdata += (dat & 0x02) << 5
     tempdata += (dat & 0x01) << 7
     return tempdata
+
+# calculate the next coordinate after rotate
+# angle must be multiple of 90
+def calculate_coordinate_after_rotate(rotate_center, pre_coor, angle):
+    print("cal in", rotate_center, pre_coor, angle)
+    pre_coor[0] = pre_coor[0] - rotate_center[0]
+    pre_coor[1] = pre_coor[1] - rotate_center[1]
+    angle = (angle + 360) % 360
+    a_coor = [0, 0]
+    a_coor[0] = round(math.cos(angle)) * pre_coor[0] + round(math.sin(angle)) * pre_coor[1]
+    a_coor[1] = -1 * round(math.sin(angle)) * pre_coor[0] + round(math.cos(angle)) * pre_coor[1]
+    a_coor[0] = a_coor[0] + rotate_center[0]
+    a_coor[1] = a_coor[1] + rotate_center[1]
+    print("cal out", rotate_center, a_coor)
+    return a_coor
 
 class sprite_create():
     def __init__(self, sp_info):
@@ -67,16 +84,16 @@ class sprite_create():
 
         if count == 1:
             p_y_d = 7 
-        self.lu_coord = [p_x_l, p_y_u] 
-        self.rd_coord = [p_x_r, p_y_d]  
+        self.lu_coord = [p_x_l, p_y_u]
+        self.rd_coord = [p_x_r, p_y_d]
         self.rotate_angle = 0
         self.position = [0, 0]
         self.show_flag = True
         self.meet_border_status = 0 # 0: not meet 1: up 2: down 3: left 4: right
-
 # calculate rotate center and region *******************************************************************
         self.rotate_center = [0, 0]
-        self.region_len = 0
+        self.region_len = 0 
+
         for i in range(2):
             self.rotate_center[i] = self.rd_coord[i] - self.lu_coord[i] + 1
             if self.rotate_center[i] % 2 == 0:
@@ -114,7 +131,8 @@ class sprite_create():
 
     def home(self):
         self.position = [0, 0]
-
+    
+    # rotate clockwisely 
     def rotate(self, angle):
         if angle % 90 == 0:
             self.rotate_angle += angle
@@ -129,22 +147,45 @@ class sprite_create():
     def hide(self):
         self.show_flag = False
 
+    def get_region(self):
+        peak_coor = [[0, 0], [0, 0], [0, 0], [0, 0]]
+        peak_coor[0] = self.lu_coord.copy()
+        peak_coor[1][0] = self.rd_coord[0]
+        peak_coor[1][1] = self.lu_coord[1]
+        peak_coor[2] = self.rd_coord.copy()
+        peak_coor[3][0] = self.lu_coord[0]
+        peak_coor[3][1] = self.rd_coord[1]
+        if (self.rotate_angle + 360) % 360 == 0:
+            return self.lu_coord.copy(), self.rd_coord.copy()
+        else:
+            time_num = ((self.rotate_angle + 360) % 360) // 90
+        print("time num is", time_num)
+        print(peak_coor)
+        lu = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[4 - time_num], self.rotate_angle)
+        rd = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[2 - time_num], self.rotate_angle)
+        return lu.copy(), rd.copy()
+
     def meet_border_check(self):
         # calculate the matrix after motion and rotation
-        if self.position[0] + self.lu_coord[0] < 0:
+        lu_c = [0, 0]
+        rd_c = [0, 0]
+        lu_c, rd_c = self.get_region()
+
+        if self.position[0] + lu_c[0] < 0:
             self.meet_border_status = LEFT_MEET
-        elif self.position[0] + self.rd_coord[0] > 15:
+        elif self.position[0] + rd_c[0] > 15:
             self.meet_border_status = RIGHT_MEET
-        elif self.position[1] + self.lu_coord[1] < 0:
+        elif self.position[1] + lu_c[1] < 0:
             self.meet_border_status = UP_MEET
-        elif self.position[1] + self.rd_coord[1] > 7:
+        elif self.position[1] + rd_c[1] > 7:
             self.meet_border_status = DOWN_MEET
         else:
             self.meet_border_status = NOT_MEET
 
-        #print("meet_border_status", self.meet_border_status)
-        #print("position", self.position)
-        #print("coor", self.lu_coord, self.rd_coord)
+        print("meet_border_status", self.meet_border_status)
+        print("position", self.position)
+        print("coor", self.lu_coord, self.rd_coord)
+        print("coor after rotate", lu_c, rd_c)
         return self.meet_border_status
         
 
@@ -159,7 +200,7 @@ class sprite_create():
         sr_cross_num = self.rotate_center[0] - (self.region_len) // 2
         # print("start line id is:", sr_line_num, "start column id is", sr_cross_num)
 
-        if self.rotate_angle < 0:
+        while self.rotate_angle < 0:
             self.rotate_angle += 360
 
         if self.rotate_angle % 360 == 90:
@@ -215,7 +256,7 @@ class game_base():
         for i in range(FACE_CROSS):
             for item in self.sprite_list:
                 if i == 0:
-                    item.meet_border_check()
+                    pass #item.meet_border_check()
                 if item.show_flag == False:
                     continue
                 if i + item.position[0] < 0 or  i + item.position[0] >= FACE_CROSS:
@@ -265,12 +306,16 @@ game.add_sprite(a)
 while True:
     if codey.is_button("A"):
         a.left()
+        a.meet_border_check()
     elif codey.is_button("B"):
         a.right()
+        a.meet_border_check()
     elif codey.is_button("C"):
-        a.rotate(90) 
+        a.rotate(90)
+        a.meet_border_check()
     if codey.dail() > 80:
         a.up()
+        a.meet_border_check()
     elif codey.dail() < 20:
         a.down()   
 
