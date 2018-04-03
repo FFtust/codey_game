@@ -10,11 +10,11 @@ FACE_CROSS = 16
 REFRESH_FREQUENCY = 50 
 SPRITE_NUM_MAX = 20
 
-NOT_MEET = 0
-UP_MEET = 1
-DOWN_MEET = 2
-LEFT_MEET = 3
-RIGHT_MEET = 4
+NOT_MEET = 0x00
+UP_MEET = 0x01
+DOWN_MEET = 0x02
+LEFT_MEET = 0x04
+RIGHT_MEET = 0x08
 
 # this is for the mismatching axis definition
 def face_info_invert(dat):
@@ -180,16 +180,17 @@ class sprite_create():
         rd_c = [0, 0]
         lu_c, rd_c = self.get_region()
 
+        self.meet_border_status = NOT_MEET
+
         if self.position[0] + lu_c[0] < 0:
             self.meet_border_status = LEFT_MEET
         elif self.position[0] + rd_c[0] > 15:
             self.meet_border_status = RIGHT_MEET
-        elif self.position[1] + lu_c[1] < 0:
-            self.meet_border_status = UP_MEET
-        elif self.position[1] + rd_c[1] > 7:
-            self.meet_border_status = DOWN_MEET
-        else:
-            self.meet_border_status = NOT_MEET
+        
+        if lu_c[1] - self.position[1] < 0:
+            self.meet_border_status |= UP_MEET
+        elif rd_c[1] - self.position[1] > 7:
+            self.meet_border_status |= DOWN_MEET
 
         # print("meet_border_status", self.meet_border_status)
         # print("position", self.position)
@@ -261,12 +262,44 @@ class game_base():
             if len(s_list) == FACE_CROSS:
                 self.back_ground = s_list.copy()
 
+    def get_background(self):
+        return self.back_ground.copy()
+
+    def set_background_with_line(self, data, line_index):
+        if line_index > 7 or line_index < 0:
+            return 0
+        for i in range(15):
+            if (1 << line_index) & (data):
+                self.back_ground[i] |= (1 << line_index)
+            else:
+                self.back_ground[i] &= (~(1 << line_index))
+    
+    def get_background_with_line(self, line_index):
+        if line_index > 7 or line_index < 0:
+            return 0
+        temp = 0
+        for i in range(15):
+            temp |= ((1 << line_index) & (self.back_ground[i]))
+        return temp
+           
+    def set_background_with_column(self, data, column_index):
+        if column_index > 15 or column_index < 0:
+            return 
+        self.back_ground[column_index] = data
+
+    def get_background_with_column(self, column_index):
+        if column_index > 15 or column_index < 0:
+            return 0
+        return self.back_ground[column_index]
+
     def show_background(self):
         self.back_ground_show = True
 
     def hide_background(self):
         self.back_ground_show = False
 
+    def get_screen():
+        return self.face_buffer
 
     def del_sprite(self, sp):
         for i in range(len(self.sprite_list)):
@@ -320,14 +353,17 @@ game.game_start()
 # you can add a sprite like this:
 ## a = sprite_create("00183000000000000000000000000000")
 ## game.add_sprite(a)
-a = sprite_create("00000010101010000000000000000000") #sprite_create("00183000000000000000000000000000")
+a = sprite_create("00000010101010000000000000000000")
 b = sprite_create("00000010101010000000000000000000")
 c = sprite_create("00000000003808000000000000000000")
 d = sprite_create("00000000000000000000000000303000")
-background = "01010101010101010101010101010101"
-game.add_sprite(a)
-game.add_sprite(b)
-game.set_background(background)
+
+plane = sprite_create("000000000000c020c000000000000000")
+game.add_sprite(plane)
+#background = "ff8181818181818181818181818181ff"
+#game.add_sprite(a)
+#game.add_sprite(b)
+#game.set_background(background)
 #game.add_sprite(c)
 #game.add_sprite(d)
 # after add the sprite, you can control the sprite like this:
@@ -339,25 +375,29 @@ game.set_background(background)
 ## sprite.right()
 ## sprite.home()
 
-while True:
-    if codey.is_button("A"):
-        a.left()
-        a.meet_border_check()
-    elif codey.is_button("B"):
-        a.right()
-        a.meet_border_check()
-    elif codey.is_button("C"):
-        a.rotate(90)
-        a.meet_border_check()
-    #if codey.dail() > 80:
-    #    a.up()
-    #    a.meet_border_check()
-    #elif codey.dail() < 20:
-    #    a.down()   
-    if game.collision_check(a, b):
-        print("a b collide")
-    #a.rotate(90)
-    #b.rotate(90)
-    #c.rotate(90)
-    #d.rotate(90)
-    time.sleep(0.3) 
+direc = 1
+def on_button_callback():
+    global direc
+    plane.left()
+
+codey.on_button('A', on_button_callback)
+
+def on_button_callback1():
+    global direc
+    plane.right()
+
+codey.on_button('B', on_button_callback1)
+
+def on_button_callback2():
+    global direc
+    direc = (direc + 1) % 3
+    while True:
+        codey.show(meet_border_check())
+        if codey.dail() > 70:
+            plane.up()
+        elif codey.dail() < 20:
+            plane.down()
+        time.sleep(0.5)
+            
+
+codey.on_button('C', on_button_callback2)
