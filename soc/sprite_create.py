@@ -7,7 +7,7 @@ import math
 
 FACE_LINE = 8
 FACE_CROSS = 16
-REFRESH_FREQUENCY = 50 
+REFRESH_FREQUENCY = 10 
 SPRITE_NUM_MAX = 20
 
 NOT_MEET = 0x00
@@ -58,6 +58,7 @@ class sprite_create():
         p_x_r = 0
         p_y_u = 0
         p_y_d = 0
+        self.ope_sema = _thread.allocate_lock()
         self.sprite_info = []
         self.sprite_current = [0] * 16
 
@@ -127,28 +128,42 @@ class sprite_create():
 
 # sprite control
     def left(self, num = 1):
+        self.ope_sema.acquire(1)
         self.position = [num_range_check(self.position[0] - num, -31, 31), self.position[1]]
+        self.ope_sema.release()
 
     def right(self, num = 1):
+        self.ope_sema.acquire(1)
         self.position = [num_range_check(self.position[0] + num, -31, 31), self.position[1]]
+        self.ope_sema.release()
 
     def down(self, num = 1):
+        self.ope_sema.acquire(1)
         self.position = [self.position[0], num_range_check(self.position[1] - num, -31, 31)]
+        self.ope_sema.release()
 
     def up(self, num = 1):
+        self.ope_sema.acquire(1)
         self.position = [self.position[0], num_range_check(self.position[1] + num, -31, 31)]
+        self.ope_sema.release()
 
     def home(self):
+        self.ope_sema.acquire(1)
         self.position = [0, 0]
-    
+        self.ope_sema.release()    
+
     # rotate clockwisely 
     def rotate(self, angle):
+        self.ope_sema.acquire(1)
         if angle % 90 == 0:
             self.rotate_angle += angle
+        self.ope_sema.release() 
 
     def rotate_to(self, angle):
+        self.ope_sema.acquire(1)
         if angle % 90 == 0:
             self.rotate_angle = angle
+        self.ope_sema.release() 
 
     def show(self):
         self.show_flag = True
@@ -181,7 +196,7 @@ class sprite_create():
         lu_c, rd_c = self.get_region()
 
         self.meet_border_status = NOT_MEET
-
+        self.ope_sema.acquire(1)
         if self.position[0] + lu_c[0] < 0:
             self.meet_border_status = LEFT_MEET
         elif self.position[0] + rd_c[0] > 15:
@@ -191,7 +206,7 @@ class sprite_create():
             self.meet_border_status |= UP_MEET
         elif rd_c[1] - self.position[1] > 7:
             self.meet_border_status |= DOWN_MEET
-
+        self.ope_sema.release() 
         # print("meet_border_status", self.meet_border_status)
         # print("position", self.position)
         # print("coor", self.lu_coord, self.rd_coord)
@@ -204,6 +219,7 @@ class sprite_create():
         sr_line_num = 0
         sr_cross_num = 0
         ret_info = [0] * 16
+        self.ope_sema.acquire(1)
 # calculate buffer after rotate ************************************************************************* 
         sr_line_num = self.rotate_center[1] - (self.region_len) // 2
         sr_cross_num = self.rotate_center[0] - (self.region_len) // 2
@@ -245,7 +261,7 @@ class sprite_create():
                     self.sprite_current[i + self.position[0]] = (ret_info[i] >> self.position[1])
                 else:
                     self.sprite_current[i + self.position[0]] = (ret_info[i] << (-self.position[1]))
-
+        self.ope_sema.release()
         #print(self.sprite_current)
 
 class game_base():
