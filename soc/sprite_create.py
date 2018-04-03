@@ -7,7 +7,7 @@ import math
 
 FACE_LINE = 8
 FACE_CROSS = 16
-REFRESH_FREQUENCY = 10 
+REFRESH_FREQUENCY = 20 
 SPRITE_NUM_MAX = 20
 
 NOT_MEET = 0x00
@@ -15,6 +15,12 @@ UP_MEET = 0x01
 DOWN_MEET = 0x02
 LEFT_MEET = 0x04
 RIGHT_MEET = 0x08
+
+def screen_update_hardware(face):
+    temp_face = [0] * FACE_CROSS
+    for i in range(FACE_CROSS):
+        temp_face[i] = face_info_invert(face[i])
+    codey_ledmatrix().faceplate_show(0, 0, *temp_face)
 
 # this is for the mismatching axis definition
 def face_info_invert(dat):
@@ -45,11 +51,26 @@ def calculate_coordinate_after_rotate(rotate_center, pre_coor, angle):
     return a_coor
 
 def script_string_to_list(script):
-    sprite_info = []
-    for i in range(FACE_CROSS):
-        dat = int(script[i * 2 :  (i + 1) * 2], 16)
-        sprite_info.append(dat)
-    return sprite_info
+    try:
+        sprite_info = []
+        for i in range(FACE_CROSS):
+            dat = int(script[i * 2 :  (i + 1) * 2], 16)
+            sprite_info.append(dat)
+        return sprite_info.copy()
+    except:
+        print_dbg("script_string_to_list error")
+
+def script_list_to_string(script):
+    try:
+        sprite_info = ""
+        for i in range(FACE_CROSS):
+            temp = hex(script[i])
+            if len(temp) == 3:
+                temp = '0x0' + temp[-1]
+            sprite_info += temp
+        return sprite_info.copy()
+    except:
+        print_dbg("script_list_to_string error")    
 
 class sprite_create():
     def __init__(self, sp_info):
@@ -60,7 +81,7 @@ class sprite_create():
         p_y_d = 0
         self.ope_sema = _thread.allocate_lock()
         self.sprite_info = []
-        self.sprite_current = [0] * 16
+        self.sprite_current = [0] * FACE_CROSS
 
         for i in range(FACE_CROSS):
             dat = int(sp_info[i * 2 :  (i + 1) * 2], 16)
@@ -72,7 +93,7 @@ class sprite_create():
                 p_x_r = i - 1
                 count += 1
         if count == 1:
-            p_x_r = 15 
+            p_x_r = FACE_CROSS - 1 
  
         count = 0
         ret = 0
@@ -93,7 +114,7 @@ class sprite_create():
             ret = 0    
 
         if count == 1:
-            p_y_d = 7 
+            p_y_d = FACE_LINE - 1 
         self.lu_coord = [p_x_l, p_y_u]
         self.rd_coord = [p_x_r, p_y_d]
         self.rotate_angle = 0
@@ -171,6 +192,17 @@ class sprite_create():
     def hide(self):
         self.show_flag = False
 
+    def set_position(self, pos):
+        if type(pos) == list:
+            if len(pos) == 2:
+                self.pos = pos.copy()
+
+    def get_position(self):
+        return self.position.copy()
+    
+    def get_rotate_angle(self):
+        return self.self.rotate_angle
+
     def get_region(self):
         peak_coor = [[0, 0], [0, 0], [0, 0], [0, 0]]
         peak_coor[0] = self.lu_coord.copy()
@@ -199,12 +231,12 @@ class sprite_create():
         self.ope_sema.acquire(1)
         if self.position[0] + lu_c[0] < 0:
             self.meet_border_status = LEFT_MEET
-        elif self.position[0] + rd_c[0] > 15:
+        elif self.position[0] + rd_c[0] >= FACE_CROSS:
             self.meet_border_status = RIGHT_MEET
         
         if lu_c[1] - self.position[1] < 0:
             self.meet_border_status |= UP_MEET
-        elif rd_c[1] - self.position[1] > 7:
+        elif rd_c[1] - self.position[1] >= FACE_LINE:
             self.meet_border_status |= DOWN_MEET
         self.ope_sema.release() 
         # print("meet_border_status", self.meet_border_status)
@@ -218,7 +250,7 @@ class sprite_create():
     def face_rotate_info(self):
         sr_line_num = 0
         sr_cross_num = 0
-        ret_info = [0] * 16
+        ret_info = [0] * FACE_CROSS
         self.ope_sema.acquire(1)
 # calculate buffer after rotate ************************************************************************* 
         sr_line_num = self.rotate_center[1] - (self.region_len) // 2
@@ -254,9 +286,9 @@ class sprite_create():
         else:
             ret_info = self.sprite_info.copy()
 
-        self.sprite_current = [0] * 16
-        for i in range(16):
-            if (i + self.position[0]) >= 0 and  (i + self.position[0]) <= 15:
+        self.sprite_current = [0] * FACE_CROSS
+        for i in range(FACE_CROSS):
+            if (i + self.position[0]) >= 0 and  (i + self.position[0]) <= FACE_CROSS - 1:
                 if self.position[1] > 0:
                     self.sprite_current[i + self.position[0]] = (ret_info[i] >> self.position[1])
                 else:
@@ -282,29 +314,29 @@ class game_base():
         return self.back_ground.copy()
 
     def set_background_with_line(self, data, line_index):
-        if line_index > 7 or line_index < 0:
+        if line_index >= FACE_LINE or line_index < 0:
             return 0
-        for i in range(15):
+        for i in range(FACE_CROSS):
             if (1 << line_index) & (data):
                 self.back_ground[i] |= (1 << line_index)
             else:
                 self.back_ground[i] &= (~(1 << line_index))
     
     def get_background_with_line(self, line_index):
-        if line_index > 7 or line_index < 0:
+        if line_index >= FACE_LINE or line_index < 0:
             return 0
         temp = 0
-        for i in range(15):
+        for i in range(FACE_CROSS):
             temp |= ((1 << line_index) & (self.back_ground[i]))
         return temp
            
     def set_background_with_column(self, data, column_index):
-        if column_index > 15 or column_index < 0:
+        if column_index >= FACE_CROSS or column_index < 0:
             return 
         self.back_ground[column_index] = data
 
     def get_background_with_column(self, column_index):
-        if column_index > 15 or column_index < 0:
+        if column_index >= FACE_CROSS or column_index < 0:
             return 0
         return self.back_ground[column_index]
 
@@ -332,7 +364,7 @@ class game_base():
         start_num = script_1.lu_coord[0] + script_1.position[0]
         #print("start_num", start_num)
         for i in range(script_1.rd_coord[0] - script_1.lu_coord[0] + 1):
-            if i + start_num < 0 or i + start_num > 15:
+            if i + start_num < 0 or i + start_num >= FACE_CROSS:
                 continue
             if script_1.sprite_current[i + start_num] ^ script_2.sprite_current[i + start_num] \
              != script_1.sprite_current[i + start_num] | script_2.sprite_current[i + start_num]:
@@ -350,8 +382,7 @@ class game_base():
                 self.face_buffer[i] |= item.sprite_current[i]
             if self.back_ground_show:
                 self.face_buffer[i] |= self.back_ground[i]
-            self.face_buffer[i] = face_info_invert(self.face_buffer[i])
-        codey_ledmatrix().faceplate_show(0, 0, *self.face_buffer)
+        screen_update_hardware(self.face_buffer)
 
     def screen_refresh_auto(self):
         while True:
