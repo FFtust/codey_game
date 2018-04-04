@@ -174,7 +174,7 @@ class sprite_create():
         self.ope_sema.release()    
 
     # rotate clockwisely 
-    def rotate(self, angle):
+    def rotate(self, angle = 90):
         self.ope_sema.acquire(1)
         if angle % 90 == 0:
             self.rotate_angle += angle
@@ -215,8 +215,6 @@ class sprite_create():
             return self.lu_coord.copy(), self.rd_coord.copy()
         else:
             time_num = ((self.rotate_angle + 360) % 360) // 90
-        #print("time num is", time_num)
-        #print(peak_coor)
         lu = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[4 - time_num], self.rotate_angle)
         rd = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[2 - time_num], self.rotate_angle)
         return lu.copy(), rd.copy()
@@ -239,10 +237,6 @@ class sprite_create():
         elif rd_c[1] - self.position[1] >= FACE_LINE:
             self.meet_border_status |= DOWN_MEET
         self.ope_sema.release() 
-        # print("meet_border_status", self.meet_border_status)
-        # print("position", self.position)
-        # print("coor", self.lu_coord, self.rd_coord)
-        # print("coor after rotate", lu_c, rd_c)
         return self.meet_border_status
         
 
@@ -255,7 +249,6 @@ class sprite_create():
 # calculate buffer after rotate ************************************************************************* 
         sr_line_num = self.rotate_center[1] - (self.region_len) // 2
         sr_cross_num = self.rotate_center[0] - (self.region_len) // 2
-        # print("start line id is:", sr_line_num, "start column id is", sr_cross_num)
 
         while self.rotate_angle < 0:
             self.rotate_angle += 360
@@ -303,75 +296,123 @@ class game_base():
         self.back_ground = [0] * FACE_CROSS
         self.back_ground_show = True
         self.sprite_list = []
+        self.sema = _thread.allocate_lock()
 
     def set_background(self, background):
-        s_list = script_string_to_list(background)
+        self.sema.acquire(1)
+        if type(background) == list:
+            s_list = background
+        elif type(background) == str:
+            s_list = script_string_to_list(background)
         if type(s_list) == list:
             if len(s_list) == FACE_CROSS:
                 self.back_ground = s_list.copy()
+        self.sema.release()
 
     def get_background(self):
-        return self.back_ground.copy()
+        self.sema.acquire(1)
+        res = self.back_ground.copy()
+        self.sema.release()
+        return res
 
     def set_background_with_line(self, data, line_index):
         if line_index >= FACE_LINE or line_index < 0:
             return 0
+
+        self.sema.acquire(1)
         for i in range(FACE_CROSS):
             if (1 << line_index) & (data):
                 self.back_ground[i] |= (1 << line_index)
             else:
                 self.back_ground[i] &= (~(1 << line_index))
-    
+        self.sema.release()
+
     def get_background_with_line(self, line_index):
         if line_index >= FACE_LINE or line_index < 0:
             return 0
+        self.sema.acquire(1)
         temp = 0
         for i in range(FACE_CROSS):
             temp |= ((1 << line_index) & (self.back_ground[i]))
+        self.sema.release()
         return temp
            
     def set_background_with_column(self, data, column_index):
         if column_index >= FACE_CROSS or column_index < 0:
             return 
+        self.sema.acquire(1)
         self.back_ground[column_index] = data
+        self.sema.release()
 
     def get_background_with_column(self, column_index):
         if column_index >= FACE_CROSS or column_index < 0:
             return 0
-        return self.back_ground[column_index]
+        self.sema.acquire(1)
+        res = self.back_ground[column_index].copy()
+        self.sema.release()
+        return res
 
     def show_background(self):
+        self.sema.acquire(1)
         self.back_ground_show = True
+        self.sema.release()
 
     def hide_background(self):
+        self.sema.acquire(1)
         self.back_ground_show = False
+        self.sema.release()
 
-    def get_screen():
-        return self.face_buffer
+    def get_screen(self):
+        self.sema.acquire(1)
+        res = self.face_buffer.copy()
+        self.sema.release()
+        return res
 
     def del_sprite(self, sp):
+        self.sema.acquire(1)
         for i in range(len(self.sprite_list)):
             if self.sprite_list[i] == sp:
                 del self.sprite_list[i]
+        self.sema.release()
 
     def sprite_list_clean(self):
+        self.sema.acquire(1)
         self.sprite_list = []
-        
+        self.sema.release()
+
     def add_sprite(self, sp):
+        self.sema.acquire(1)
         self.sprite_list.append(sp)
+        self.sema.release()
 
     def collision_check(self, script_1, script_2):
+        self.sema.acquire(1)
         start_num = script_1.lu_coord[0] + script_1.position[0]
-        #print("start_num", start_num)
         for i in range(script_1.rd_coord[0] - script_1.lu_coord[0] + 1):
             if i + start_num < 0 or i + start_num >= FACE_CROSS:
                 continue
             if script_1.sprite_current[i + start_num] ^ script_2.sprite_current[i + start_num] \
              != script_1.sprite_current[i + start_num] | script_2.sprite_current[i + start_num]:
+                self.sema.release()
                 return True
+        self.sema.release()
+        return False
+
+    def background_collision_check(self, script):
+        self.sema.acquire(1)
+        start_num = script.lu_coord[0] + script.position[0]
+        for i in range(script.rd_coord[0] - script.lu_coord[0] + 1):
+            if i + start_num < 0 or i + start_num >= FACE_CROSS:
+                continue
+            if script.sprite_current[i + start_num] ^ self.back_ground[i + start_num] \
+             != script.sprite_current[i + start_num] | self.back_ground[i + start_num]:
+                self.sema.release()
+                return True
+        self.sema.release()
         return False
 
     def screen_refresh(self):
+        self.sema.acquire(1)
         self.face_buffer = [0] * FACE_CROSS
         for i in range(FACE_CROSS):
             for item in self.sprite_list:
@@ -382,7 +423,9 @@ class game_base():
                 self.face_buffer[i] |= item.sprite_current[i]
             if self.back_ground_show:
                 self.face_buffer[i] |= self.back_ground[i]
+        self.sema.release()
         screen_update_hardware(self.face_buffer)
+
 
     def screen_refresh_auto(self):
         while True:
@@ -392,59 +435,3 @@ class game_base():
     def game_start(self):
         _thread.start_new_thread(self.screen_refresh_auto, ())
 
-
-# example
-# these codes is necessary 
-game = game_base()
-game.game_start()
-# you can add a sprite like this:
-## a = sprite_create("00183000000000000000000000000000")
-## game.add_sprite(a)
-a = sprite_create("00000010101010000000000000000000")
-b = sprite_create("00000010101010000000000000000000")
-c = sprite_create("00000000003808000000000000000000")
-d = sprite_create("00000000000000000000000000303000")
-
-plane = sprite_create("000000000000c020c000000000000000")
-game.add_sprite(plane)
-#background = "ff8181818181818181818181818181ff"
-#game.add_sprite(a)
-#game.add_sprite(b)
-#game.set_background(background)
-#game.add_sprite(c)
-#game.add_sprite(d)
-# after add the sprite, you can control the sprite like this:
-## sprite.rotate(90)
-## sprite.rotate_to(90)
-## sprite.up()
-## sprite.down()
-## sprite.left()
-## sprite.right()
-## sprite.home()
-
-direc = 1
-def on_button_callback():
-    global direc
-    plane.left()
-
-codey.on_button('A', on_button_callback)
-
-def on_button_callback1():
-    global direc
-    plane.right()
-
-codey.on_button('B', on_button_callback1)
-
-def on_button_callback2():
-    global direc
-    direc = (direc + 1) % 3
-    while True:
-        codey.show(meet_border_check())
-        if codey.dail() > 70:
-            plane.up()
-        elif codey.dail() < 20:
-            plane.down()
-        time.sleep(0.5)
-            
-
-codey.on_button('C', on_button_callback2)

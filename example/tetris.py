@@ -1,9 +1,11 @@
 from game import game_base
 from game import sprite_create
+from game import *
 import codey 
 import time
 import random
 
+score = 0
 game = game_base()
 game.game_start()
 game_scripts = []
@@ -14,90 +16,118 @@ c_s = '30300000000000000000000000000000'
 d_s = '10302000000000000000000000000000'
 e_s = '30101000000000000000000000000000'
 
-def 
-a = sprite_create("00183000000000000000000000000000")
-#background = "ff8181818181818181818181818181ff"
-#game.set_background(background)
-#plane = sprite_create("000000000000c020c000000000000000")
-game.add_sprite(b)
+a = sprite_create(a_s)
+a.hide()
+b = sprite_create(b_s)
+b.hide()
+c = sprite_create(c_s)
+c.hide()
+d = sprite_create(d_s)
+d.hide()
+e = sprite_create(e_s)
+e.hide()
 game.add_sprite(a)
-#background = "ff8181818181818181818181818181ff"
-#game.add_sprite(a)
-#game.add_sprite(b)
-#game.set_background(background)
-#game.add_sprite(c)
-#game.add_sprite(d)
-# after add the sprite, you can control the sprite like this:
-## sprite.rotate(90)
-## sprite.rotate_to(90)
-## sprite.up()
-## sprite.down()
-## sprite.left()
-## sprite.right()
-## sprite.home()
+game.add_sprite(b)
+game.add_sprite(c)
+game.add_sprite(d)
+game.add_sprite(e)
 
-cur_direc = 1 # 1: right-up 2: right-down 3: left-up 4: left-down
-last_direc = 1
-speed = 1
-b.up()
-def on_button_callback():
-    global cur_direc, last_direc
-    b.left()
+def line_remove_process():
+    global score
+    screen = game.get_screen()
+    print("screen", game.back_ground)
+    i = 0
+    while i < 16:
+        if screen[i] & 0xff == 0xff:
+            del game.back_ground[i]
+            game.back_ground.insert(0, 0x00)
+            print("kkk", i, screen)
+        print("i", i, screen)
+        i += 1
+    time.sleep(0.2)
+    print("back", game.back_ground)
 
-codey.on_button('A', on_button_callback)
 
-def on_button_callback1():
-    global cur_direc, last_direc
-    b.right()
-
-codey.on_button('B', on_button_callback1)
-
+current_script = a
+down_speed = 10
+codey.set_variable('cmd', 0)
 def on_button_callback2():
-    global cur_direc, last_direc
-    count = 0
+    global down_speed
     while True:
-        speed = codey.dail() // 10
-        if cur_direc == 1:
-            if a.meet_border_check() == 0x01: # up
-                cur_direc = 2
-            elif a.meet_border_check() == 0x08: # right
-                cur_direc = 3
-        elif cur_direc == 2:
-            if a.meet_border_check() == 0x02: # down
-                cur_direc = 1
-            elif a.meet_border_check() == 0x08: # right
-                cur_direc = 4
-            elif game.collision_check(a, b):
-                cur_direc = 1
-                codey.say('jump.wav', False)
-
-        elif cur_direc == 3:
-            if a.meet_border_check() == 0x01: # up
-                cur_direc = 4
-            elif a.meet_border_check() == 0x04: # left
-                cur_direc = 1     
-        elif cur_direc == 4:
-            if a.meet_border_check() == 0x02: # down
-                cur_direc = 3
-            elif a.meet_border_check() == 0x04: # left
-                cur_direc = 2
-            elif game.collision_check(a, b):
-                cur_direc = 3
-                codey.say('jump.wav', False)
-
-        if cur_direc == 1:
-            a.up()
-            a.right()
-        elif cur_direc == 2:
-            a.down()
-            a.right()
-        elif cur_direc == 3:
-            a.left()
-            a.up()          
-        elif cur_direc == 4:
-            a.left()
-            a.down()
-
-        time.sleep(1.05 - speed / 10)
-            
+        if codey.get_variable('cmd') == 1:
+            current_script.up()
+            codey.set_variable('cmd', 0)          
+        elif codey.get_variable('cmd') == 2:
+            current_script.down()
+            codey.set_variable('cmd', 0)
+        elif codey.get_variable('cmd') == 3:
+            current_script.rotate()
+            codey.set_variable('cmd', 0)
+        elif codey.get_variable('cmd') == 4:
+            down_speed = 2
+            codey.set_variable('cmd', 0)
+        time.sleep(0.05)
+         
 codey.on_button('C', on_button_callback2)
+
+def on_button_callback3():
+    global current_script, down_speed
+    game.set_background(game.get_screen())
+    line_remove_process()    
+    a.home()
+    a.hide()
+    b.home()
+    b.hide()
+    c.home()
+    c.hide()
+    d.home()
+    d.hide()
+    e.home()
+    e.hide()
+    count = 1
+    current_script = a
+    others_scripts = [b, d, d, e]
+    for i in range(5): 
+        if i == 0:
+            current_script = a
+            others_scripts = [b, d, d, e]
+            current_script.show()            
+        if i == 1:
+            current_script = b
+            others_scripts = [a, c, d, e]            
+        elif i == 2:
+            current_script = c
+            others_scripts = [a, b, d, e]  
+        elif i == 3:
+            current_script = d
+            others_scripts = [a, b, c, e]  
+        elif i == 4:
+            current_script = e
+            others_scripts = [a, b, c, d]
+
+        count = 1
+        down_speed = 10
+        current_script.show()
+        while True:
+            if count % down_speed == 0:
+                current_script.right()
+            if current_script.meet_border_check() == RIGHT_MEET:
+                current_script.left()
+                break
+            break_flag = False
+            for item in others_scripts:
+                if (item.show_flag and game.collision_check(current_script, item)) or (game.background_collision_check(current_script)):
+                    current_script.left()
+                    break_flag = True
+                    break
+            if break_flag:
+                break
+            time.sleep(0.05)
+            count += 1
+        time.sleep(0.1)
+        game.set_background(game.get_screen())
+        time.sleep(0.1)
+        line_remove_process()        
+
+codey.on_button('C', on_button_callback3)
+
