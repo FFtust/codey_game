@@ -35,18 +35,15 @@ game.add_sprite(e)
 def line_remove_process():
     global score
     screen = game.get_screen()
-    print("screen", game.back_ground)
     i = 0
     while i < 16:
         if screen[i] & 0xff == 0xff:
+            score += 1
             del game.back_ground[i]
             game.back_ground.insert(0, 0x00)
-            print("kkk", i, screen)
-        print("i", i, screen)
+            codey.say("start")
         i += 1
     time.sleep(0.2)
-    print("back", game.back_ground)
-
 
 current_script = a
 down_speed = 10
@@ -71,63 +68,61 @@ def on_button_callback2():
 codey.on_button('C', on_button_callback2)
 
 def on_button_callback3():
-    global current_script, down_speed
-    game.set_background(game.get_screen())
-    line_remove_process()    
-    a.home()
-    a.hide()
-    b.home()
-    b.hide()
-    c.home()
-    c.hide()
-    d.home()
-    d.hide()
-    e.home()
-    e.hide()
-    count = 1
-    current_script = a
-    others_scripts = [b, d, d, e]
-    for i in range(5): 
-        if i == 0:
-            current_script = a
-            others_scripts = [b, d, d, e]
-            current_script.show()            
-        if i == 1:
-            current_script = b
-            others_scripts = [a, c, d, e]            
-        elif i == 2:
-            current_script = c
-            others_scripts = [a, b, d, e]  
-        elif i == 3:
-            current_script = d
-            others_scripts = [a, b, c, e]  
-        elif i == 4:
-            current_script = e
-            others_scripts = [a, b, c, d]
-
+    global current_script, down_speed, score
+    while True:
+        a.home()
+        b.home()
+        c.home()
+        d.home()
+        e.home()
         count = 1
-        down_speed = 10
-        current_script.show()
-        while True:
-            if count % down_speed == 0:
-                current_script.right()
-            if current_script.meet_border_check() == RIGHT_MEET:
-                current_script.left()
-                break
-            break_flag = False
-            for item in others_scripts:
-                if (item.show_flag and game.collision_check(current_script, item)) or (game.background_collision_check(current_script)):
+        current_script = a
+        others_scripts = [b, d, d, e]
+        for i in range(5): 
+            if i == 0:
+                current_script = a
+                others_scripts = [b, d, d, e]          
+            if i == 1:
+                current_script = b
+                others_scripts = [a, c, d, e]            
+            elif i == 2:
+                current_script = c
+                others_scripts = [a, b, d, e]  
+            elif i == 3:
+                current_script = d
+                others_scripts = [a, b, c, e]  
+            elif i == 4:
+                current_script = e
+                others_scripts = [a, b, c, d]
+
+            count = 1
+            down_speed = 10
+            current_script.show()
+            while True:
+                if count % down_speed == 0:
+                    current_script.right()
+                
+                if game.background_collision_check(current_script):
                     current_script.left()
-                    break_flag = True
+                    codey.say("score")
                     break
-            if break_flag:
-                break
-            time.sleep(0.05)
-            count += 1
-        time.sleep(0.1)
-        game.set_background(game.get_screen())
-        time.sleep(0.1)
-        line_remove_process()        
+
+                if current_script.meet_border_check() == RIGHT_MEET:
+                    current_script.left()
+                    codey.say("score")
+                    break
+     
+                time.sleep(0.025)
+                count += 1
+            time.sleep(0.1)
+            game.set_background(game.get_screen())
+            a.hide()
+            b.hide()
+            c.hide()
+            d.hide()
+            e.hide()
+            time.sleep(0.1)
+            line_remove_process()
 
 codey.on_button('C', on_button_callback3)
 

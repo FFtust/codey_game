@@ -7,7 +7,7 @@ import math
 
 FACE_LINE = 8
 FACE_CROSS = 16
-REFRESH_FREQUENCY = 20 
+REFRESH_FREQUENCY = 60
 SPRITE_NUM_MAX = 20
 
 NOT_MEET = 0x00
@@ -187,21 +187,33 @@ class sprite_create():
         self.ope_sema.release() 
 
     def show(self):
+        self.ope_sema.acquire(1)
         self.show_flag = True
+        self.ope_sema.release() 
 
     def hide(self):
+        self.ope_sema.acquire(1)
         self.show_flag = False
+        self.ope_sema.release() 
 
     def set_position(self, pos):
+        self.ope_sema.acquire(1)
         if type(pos) == list:
             if len(pos) == 2:
                 self.pos = pos.copy()
+        self.ope_sema.release() 
 
     def get_position(self):
-        return self.position.copy()
-    
+        self.ope_sema.acquire(1)
+        res =  self.position.copy()
+        self.ope_sema.release() 
+        return res
+
     def get_rotate_angle(self):
-        return self.self.rotate_angle
+        self.ope_sema.acquire(1)
+        res =  self.self.rotate_angle
+        self.ope_sema.release()
+        return res
 
     def get_region(self):
         peak_coor = [[0, 0], [0, 0], [0, 0], [0, 0]]
@@ -387,6 +399,8 @@ class game_base():
 
     def collision_check(self, script_1, script_2):
         self.sema.acquire(1)
+        script_1.face_rotate_info()
+        script_2.face_rotate_info()
         start_num = script_1.lu_coord[0] + script_1.position[0]
         for i in range(script_1.rd_coord[0] - script_1.lu_coord[0] + 1):
             if i + start_num < 0 or i + start_num >= FACE_CROSS:
@@ -400,6 +414,7 @@ class game_base():
 
     def background_collision_check(self, script):
         self.sema.acquire(1)
+        script.face_rotate_info()
         start_num = script.lu_coord[0] + script.position[0]
         for i in range(script.rd_coord[0] - script.lu_coord[0] + 1):
             if i + start_num < 0 or i + start_num >= FACE_CROSS:
