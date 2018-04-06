@@ -16,6 +16,7 @@ f_s = '08181000000000000000000000000000'
 sprite_num = 6
 sprites = [a_s, b_s, c_s, d_s, e_s, f_s]
 current_script = None
+move_lock_flag = False
 def line_remove_process():
     global score
     screen = game.get_screen()
@@ -32,22 +33,22 @@ def line_remove_process():
 down_speed = 10
 codey.set_variable('cmd', 0)
 def on_button_callback2():
-    global down_speed, current_script
+    global down_speed, current_script, move_lock_flag
     time.sleep(0.5)
     while True:
-        if current_script == None:
+        if current_script == None :
             time.sleep(0.2)
             continue
-        if codey.get_variable('cmd') == 1:
+        if codey.get_variable('cmd') == 1 and move_lock_flag == False:
             current_script.up()
             codey.set_variable('cmd', 0)          
-        elif codey.get_variable('cmd') == 2:
+        elif codey.get_variable('cmd') == 2 and move_lock_flag == False:
             current_script.down()
             codey.set_variable('cmd', 0)
-        elif codey.get_variable('cmd') == 3:
+        elif codey.get_variable('cmd') == 3 and move_lock_flag == False:
             current_script.rotate()
             codey.set_variable('cmd', 0)
-        elif codey.get_variable('cmd') == 4:
+        elif codey.get_variable('cmd') == 4 and move_lock_flag == False:
             down_speed = 2
             codey.set_variable('cmd', 0)
 
@@ -65,7 +66,7 @@ def on_button_callback2():
 codey.on_button('C', on_button_callback2)
 
 def on_button_callback3():
-    global current_script, down_speed, score
+    global current_script, down_speed, score, move_lock_flag
     game.game_start()
     game.set_background([0] * 16)
     while True:
@@ -75,10 +76,10 @@ def on_button_callback3():
         if game.background_collision_check(current_script):
             game.del_sprite(current_script)
             current_script = None
-            score = 0
             codey.say("wrong")
             game.game_over()
             codey.show(score)
+            score = 0
             break
         count = 1
         down_speed = 10
@@ -87,11 +88,13 @@ def on_button_callback3():
                 current_script.right()
             
             if current_script.meet_border_check() == RIGHT_MEET:
+                move_lock_flag = True
                 current_script.left()
                 codey.say("score")
                 break
 
             if game.background_collision_check(current_script):
+                move_lock_flag = True
                 current_script.left()
                 codey.say("score")
                 break
@@ -104,6 +107,7 @@ def on_button_callback3():
         time.sleep(0.1)
         line_remove_process()
         game.del_sprite(current_script)
+        move_lock_flag = False
 
 codey.on_button('C', on_button_callback3)
 
