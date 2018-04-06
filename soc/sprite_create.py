@@ -10,12 +10,17 @@ FACE_CROSS = 16
 REFRESH_FREQUENCY = 60
 SPRITE_NUM_MAX = 20
 
+GAME_READY = 0
+GAME_RUNING = 1
+GAME_OVER = 2
+
 NOT_MEET = 0x00
 UP_MEET = 0x01
 DOWN_MEET = 0x02
 LEFT_MEET = 0x04
 RIGHT_MEET = 0x08
 
+ANGLE_TORADIAN = 57.3
 def screen_update_hardware(face):
     temp_face = [0] * FACE_CROSS
     for i in range(FACE_CROSS):
@@ -38,17 +43,17 @@ def face_info_invert(dat):
 # calculate the next coordinate after rotate
 # angle must be multiple of 90
 def calculate_coordinate_after_rotate(rotate_center, pre_coor, angle):
-    # print("cal in", rotate_center, pre_coor, angle)
-    pre_coor[0] = pre_coor[0] - rotate_center[0]
-    pre_coor[1] = pre_coor[1] - rotate_center[1]
-    angle = (angle + 360) % 360
+    temp = [0, 0]
+    temp[0] = pre_coor[0] - rotate_center[0]
+    temp[1] = pre_coor[1] - rotate_center[1]
+    t_angle = (angle + 360) % 360
+    t_angle = t_angle / ANGLE_TORADIAN
     a_coor = [0, 0]
-    a_coor[0] = round(math.cos(angle)) * pre_coor[0] + round(math.sin(angle)) * pre_coor[1]
-    a_coor[1] = -1 * round(math.sin(angle)) * pre_coor[0] + round(math.cos(angle)) * pre_coor[1]
+    a_coor[0] = round(math.cos(t_angle)) * temp[0] - round(math.sin(t_angle)) * temp[1]
+    a_coor[1] = round(math.sin(t_angle)) * temp[0] + round(math.cos(t_angle)) * temp[1]
     a_coor[0] = a_coor[0] + rotate_center[0]
     a_coor[1] = a_coor[1] + rotate_center[1]
-    # print("cal out", rotate_center, a_coor)
-    return a_coor
+    return a_coor.copy()
 
 def script_string_to_list(script):
     try:
@@ -97,7 +102,6 @@ class sprite_create():
  
         count = 0
         ret = 0
-        print("sprite_info", self.sprite_info)
         # check the lfet_up point
         for i in range(FACE_LINE):
             for j in range(FACE_CROSS):
@@ -225,20 +229,23 @@ class sprite_create():
         peak_coor[3][1] = self.rd_coord[1]
         if (self.rotate_angle + 360) % 360 == 0:
             return self.lu_coord.copy(), self.rd_coord.copy()
+        elif (self.rd_coord[0] - self.lu_coord[0]) == (self.rd_coord[1] - self.lu_coord[1]):
+            return self.lu_coord.copy(), self.rd_coord.copy()
         else:
             time_num = ((self.rotate_angle + 360) % 360) // 90
         lu = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[4 - time_num], self.rotate_angle)
-        rd = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[2 - time_num], self.rotate_angle)
+        rd = calculate_coordinate_after_rotate(self.rotate_center, peak_coor[(6 - time_num) % 4], self.rotate_angle)
+
         return lu.copy(), rd.copy()
 
     def meet_border_check(self):
         # calculate the matrix after motion and rotation
         lu_c = [0, 0]
         rd_c = [0, 0]
+        self.ope_sema.acquire(1)
         lu_c, rd_c = self.get_region()
 
         self.meet_border_status = NOT_MEET
-        self.ope_sema.acquire(1)
         if self.position[0] + lu_c[0] < 0:
             self.meet_border_status = LEFT_MEET
         elif self.position[0] + rd_c[0] >= FACE_CROSS:
@@ -299,7 +306,6 @@ class sprite_create():
                 else:
                     self.sprite_current[i + self.position[0]] = (ret_info[i] << (-self.position[1]))
         self.ope_sema.release()
-        #print(self.sprite_current)
 
 class game_base():
     def __init__(self):
@@ -443,10 +449,16 @@ class game_base():
 
 
     def screen_refresh_auto(self):
+        self.status = GAME_RUNING
         while True:
+            if self.status == GAME_OVER:
+                self.status = GAME_READY
+                break
             self.screen_refresh()
             time.sleep(REFRESH_FREQUENCY / 1000)
 
     def game_start(self):
         _thread.start_new_thread(self.screen_refresh_auto, ())
 
+    def game_over(self):
+        self.status = GAME_OVER

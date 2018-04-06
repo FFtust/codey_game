@@ -4,37 +4,13 @@ import codey
 import time
 import random
 
-# example
-# these codes is necessary 
 game = game_base()
 game.game_start()
-# you can add a sprite like this:
-## a = sprite_create("00183000000000000000000000000000")
-## game.add_sprite(a)
-#a = sprite_create("00000080808080000000000000000000")
 b = sprite_create("00000080808080000000000000000000")
-#b = sprite_create("00000010101010000000000000000000")
-#c = sprite_create("00000000003808000000000000000000")
 a = sprite_create("00000000000000000000000000303000")
-#background = "ff8181818181818181818181818181ff"
-#game.set_background(background)
-#plane = sprite_create("000000000000c020c000000000000000")
 game.add_sprite(b)
 game.add_sprite(a)
-#background = "ff8181818181818181818181818181ff"
-#game.add_sprite(a)
-#game.add_sprite(b)
-#game.set_background(background)
-#game.add_sprite(c)
-#game.add_sprite(d)
-# after add the sprite, you can control the sprite like this:
-## sprite.rotate(90)
-## sprite.rotate_to(90)
-## sprite.up()
-## sprite.down()
-## sprite.left()
-## sprite.right()
-## sprite.home()
+
 
 cur_direc = 1 # 1: right-up 2: right-down 3: left-up 4: left-down
 last_direc = 1
