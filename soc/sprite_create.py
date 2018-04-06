@@ -1,4 +1,5 @@
-import codey 
+from codey_rgbled_board import codey_rgbled
+from makeblock import music
 from codey_global_board import *
 import _thread
 import time
@@ -10,9 +11,10 @@ FACE_CROSS = 16
 REFRESH_FREQUENCY = 60
 SPRITE_NUM_MAX = 20
 
-GAME_READY = 0
-GAME_RUNING = 1
-GAME_OVER = 2
+GAME_NOT_START = 0
+GAME_READY = 1
+GAME_RUNING = 2
+GAME_OVER = 3
 
 NOT_MEET = 0x00
 UP_MEET = 0x01
@@ -451,14 +453,16 @@ class game_base():
     def screen_refresh_auto(self):
         self.status = GAME_RUNING
         while True:
-            if self.status == GAME_OVER:
-                self.status = GAME_READY
-                break
-            self.screen_refresh()
-            time.sleep(REFRESH_FREQUENCY / 1000)
+            if self.status == GAME_RUNING:
+                self.screen_refresh()
+                time.sleep(REFRESH_FREQUENCY / 1000)
+            else:
+                time.sleep(0.2)
 
     def game_start(self):
-        _thread.start_new_thread(self.screen_refresh_auto, ())
+        if self.status == GAME_NOT_START:
+            _thread.start_new_thread(self.screen_refresh_auto, ())
+        self.status = GAME_RUNING
 
     def game_over(self):
         self.status = GAME_OVER

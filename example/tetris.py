@@ -7,8 +7,6 @@ import random
 
 score = 0
 game = game_base()
-game.game_start()
-
 a_s = '10101010000000000000000000000000'
 b_s = '10380000000000000000000000000000'
 c_s = '30300000000000000000000000000000'
@@ -17,7 +15,7 @@ e_s = '30101000000000000000000000000000'
 f_s = '08181000000000000000000000000000'
 sprite_num = 6
 sprites = [a_s, b_s, c_s, d_s, e_s, f_s]
-current_script = 0
+current_script = None
 def line_remove_process():
     global score
     screen = game.get_screen()
@@ -37,6 +35,9 @@ def on_button_callback2():
     global down_speed, current_script
     time.sleep(0.5)
     while True:
+        if current_script == None:
+            time.sleep(0.2)
+            continue
         if codey.get_variable('cmd') == 1:
             current_script.up()
             codey.set_variable('cmd', 0)          
@@ -65,15 +66,19 @@ codey.on_button('C', on_button_callback2)
 
 def on_button_callback3():
     global current_script, down_speed, score
+    game.game_start()
+    game.set_background([0] * 16)
     while True:
         index = random.randint(0, sprite_num - 1)
         current_script = sprite_create(sprites[index])
         game.add_sprite(current_script)
         if game.background_collision_check(current_script):
-            game.game_over()
-            time.sleep(0.2)
-            codey.show(score)
+            game.del_sprite(current_script)
+            current_script = None
+            score = 0
             codey.say("wrong")
+            game.game_over()
+            codey.show(score)
             break
         count = 1
         down_speed = 10
