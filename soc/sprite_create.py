@@ -1,5 +1,3 @@
-from codey_rgbled_board import codey_rgbled
-from makeblock import music
 from codey_global_board import *
 import _thread
 import time
@@ -206,7 +204,7 @@ class sprite_create():
         self.ope_sema.acquire(1)
         if type(pos) == list:
             if len(pos) == 2:
-                self.pos = pos.copy()
+                self.position = pos.copy()
         self.ope_sema.release() 
 
     def get_position(self):
@@ -329,6 +327,22 @@ class game_base():
                 self.back_ground = s_list.copy()
         self.sema.release()
 
+    def set_background_with_point(self, point_pos):
+        self.sema.acquire(1)
+        if point_pos[1] > 0:
+            self.back_ground[point_pos[0]] |= (1 >> point_pos[1]) 
+        else:
+            self.back_ground[point_pos[0]] |= (1 << (-point_pos[1])) 
+        self.sema.release()
+
+    def clear_background_with_point(self, point_pos):
+        self.sema.acquire(1)
+        if point_pos[1] > 0:
+            self.back_ground[point_pos[0]] &= ~(1 >> point_pos[1]) 
+        else:
+            self.back_ground[point_pos[0]] &= ~(1 << (-point_pos[1])) 
+        self.sema.release()
+
     def get_background(self):
         self.sema.acquire(1)
         res = self.back_ground.copy()
@@ -383,6 +397,7 @@ class game_base():
         self.sema.release()
 
     def get_screen(self):
+        self.screen_refresh()
         self.sema.acquire(1)
         res = self.face_buffer.copy()
         self.sema.release()
@@ -397,6 +412,7 @@ class game_base():
 
     def sprite_list_clean(self):
         self.sema.acquire(1)
+        del self.sprite_list
         self.sprite_list = []
         self.sema.release()
 
