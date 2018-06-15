@@ -6,7 +6,7 @@ import math
 
 FACE_LINE = 8
 FACE_CROSS = 16
-REFRESH_INTERVAL = 60
+REFRESH_FREQUENCY = 60
 SPRITE_NUM_MAX = 20
 
 GAME_NOT_START = 0
@@ -204,15 +204,12 @@ class sprite_create():
         self.ope_sema.acquire(1)
         if type(pos) == list:
             if len(pos) == 2:
-                self.position[0] = pos[0]
-                self.position[1] = -pos[1]
+                self.position = pos.copy()
         self.ope_sema.release() 
 
     def get_position(self):
         self.ope_sema.acquire(1)
-        res = [0, 0]
-        res[0] = self.position[0]
-        res[1] = -self.position[1]
+        res =  self.position.copy()
         self.ope_sema.release() 
         return res
 
@@ -318,7 +315,6 @@ class game_base():
         self.back_ground_show = True
         self.sprite_list = []
         self.sema = _thread.allocate_lock()
-        self.refresh_interval = REFRESH_INTERVAL
 
     def set_background(self, background):
         self.sema.acquire(1)
@@ -334,17 +330,17 @@ class game_base():
     def set_background_with_point(self, point_pos):
         self.sema.acquire(1)
         if point_pos[1] > 0:
-            self.back_ground[point_pos[0]] |= (1 << point_pos[1]) 
+            self.back_ground[point_pos[0]] |= (1 >> point_pos[1]) 
         else:
-            self.back_ground[point_pos[0]] |= (1 >> (-point_pos[1])) 
+            self.back_ground[point_pos[0]] |= (1 << (-point_pos[1])) 
         self.sema.release()
 
     def clear_background_with_point(self, point_pos):
         self.sema.acquire(1)
         if point_pos[1] > 0:
-            self.back_ground[point_pos[0]] &= ~(1 << point_pos[1]) 
+            self.back_ground[point_pos[0]] &= ~(1 >> point_pos[1]) 
         else:
-            self.back_ground[point_pos[0]] &= ~(1 >> (-point_pos[1])) 
+            self.back_ground[point_pos[0]] &= ~(1 << (-point_pos[1])) 
         self.sema.release()
 
     def get_background(self):
@@ -469,18 +465,13 @@ class game_base():
         self.sema.release()
         screen_update_hardware(self.face_buffer)
 
-    def set_refresh_interval(self, val):
-        self.refresh_interval = val
 
-    def get_refresh_interval(self, val):
-        return self.refresh_interval
-        
     def screen_refresh_auto(self):
         self.status = GAME_RUNING
         while True:
             if self.status == GAME_RUNING:
                 self.screen_refresh()
-                time.sleep(self.refresh_interval / 1000)
+                time.sleep(REFRESH_FREQUENCY / 1000)
             else:
                 time.sleep(0.2)
 
