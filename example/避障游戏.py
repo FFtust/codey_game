@@ -5,14 +5,11 @@ import codey
 import time
 import random
 
-DIR_NONE = 0
-DIR_LEFT = 1
-DIR_RIGHT = 2
-
-
 game = game_base()
+# 两个角色 为两个小点
 l_s = '00000000000000200000000000000000'
 r_s = '00000000000000002000000000000000'
+#背景图案
 b_s = '0000000000ff00000000ff0000000000'
 
 left_h = sprite_create(l_s)
@@ -29,24 +26,26 @@ score = 0
 
 bg_change_count = 0
 
-# default speed 3
+# 速度控制
 def speed_control():
     global speed
-    speed = codey.dail() // 5
-    print(speed)
+    speed = (codey.dail() // 20) + 2
 
+# 角色移动控制
 def move_control():
     global speed, move_lock_flag
-
+    # A键按下， 左边角色左移， 否则回到原来位置
     if codey.is_button('A') and move_lock_flag == False:
         left_h.set_position([-1, 0])
     else:
         left_h.home()
+    # B键按下， 右边角色右移， 否则回到原来位置
     if codey.is_button('B') and move_lock_flag == False:
         right_h.set_position([1, 0])
     else:
         right_h.home()
 
+# 背景控制
 def background_control():
     global bg_change_count, score
     temp = game.get_background()
@@ -65,11 +64,13 @@ def background_control():
         pass
     game.set_background(temp)
     bg_change_count += 1
+
 def game_deinit():
     global speed, score, move_lock_flag
     score = 0
     game.set_background(b_s)
 
+# C键开始
 def on_button_callback3():
     global speed, score, move_lock_flag
     count = 1
@@ -83,6 +84,7 @@ def on_button_callback3():
                 background_control()
         else:
             background_control()
+        # 如果角色碰到背景， 则游戏结束
         if game.background_collision_check(right_h) or game.background_collision_check(left_h):
             game.game_over()
             codey.say("wrong")
